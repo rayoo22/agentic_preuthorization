@@ -22,14 +22,16 @@ def extract_email_body(gmail_service, msg_id):
     
     return msg.get('snippet', '')
 
+""" this is the main workflow executing all requests """
 def main():
     load_dotenv()
     
     print("Fetching unread emails from Gmail (Agentic_AI label)...")
     gmail = GmailReader()
-    emails = gmail.fetch_emails(max_results=50, label_name='Agentic_AI', unread_only=True)
+    emails = gmail.fetch_emails(max_results=os.getenv('MAX_EMAILS'), label_name='Agentic_AI', unread_only=True)
     print(f"Found {len(emails)} unread emails\n")
     
+    """creating an instance of functions to be used"""
     email_db = EmailDB()
     claims_db = ClaimsDB()
     members_db = MembersDB()
@@ -39,6 +41,7 @@ def main():
     new_count = 0
     duplicate_count = 0
     
+    """iterate through emails and process each one"""""
     for email in emails:
         if email_db.insert_email(email):
             new_count += 1
@@ -49,7 +52,6 @@ def main():
             print(full_body)
             input("Press Enter to continue...")
         
-
             # Extract claim data using LLM
             claim_data = agent.extract_claim_data(email['subject'], full_body)
             print(claim_data)
@@ -64,6 +66,7 @@ def main():
             # Check member existence and policy balance
             member = members_db.get_member(claim_data['member_id'])
             
+            """if member is not found status column will be labeled DENIED"""
             if not member:
                 print(f"   Member {claim_data['member_id']} not found")
                 claims_db.insert_claim(
@@ -79,10 +82,10 @@ def main():
                 )
                 continue
             
-            print(f"   Member found: {member['full_name']} (Balance: ${member['policy_balance']})")
+            print(f"   Member found: {member['full_name']} (Balance: Ksh.{member['policy_balance']})")
             
             # Check policy balance
-            if member['policy_balance'] < claim_data['claim_amount']:
+            if member['policy_balance'] <= claim_data['claim_amount']:
                 print(f"  Insufficient balance: ${member['policy_balance']} < ${claim_data['claim_amount']}")
                 claim_id = claims_db.insert_claim(
                     claim_data['member_id'],
