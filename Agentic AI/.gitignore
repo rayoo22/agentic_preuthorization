@@ -3,7 +3,6 @@ credentials.json
 myenv/
 requirements.txt
 token.pickle
-README.md
 .autopilot.json
 .cursor/
 .env
